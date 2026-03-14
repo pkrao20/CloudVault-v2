@@ -5,11 +5,12 @@ import {
   ConflictException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { MoreThan, Repository } from 'typeorm';
+import { Repository } from 'typeorm';
 import { Workspace } from './workspace.entity';
 import { WorkspaceMember } from './workspace-member.entity';
 import { File } from '../files/file.entity';
 import { Folder } from '../folders/folder.entity';
+import { Permission } from '../permissions/permission.entity';
 import { CreateWorkspaceDto } from './dto/create-workspace.dto';
 import { AddMemberDto } from './dto/add-member.dto';
 
@@ -24,6 +25,8 @@ export class WorkspacesService {
     private readonly fileRepo: Repository<File>,
     @InjectRepository(Folder)
     private readonly folderRepo: Repository<Folder>,
+    @InjectRepository(Permission)
+    private readonly permRepo: Repository<Permission>,
   ) {}
 
   async create(dto: CreateWorkspaceDto, userId: string) {
@@ -114,7 +117,45 @@ export class WorkspacesService {
       userId: dto.userId,
       role: dto.role,
     });
-    return this.memberRepo.save(member);
+    const savedMember = await this.memberRepo.save(member);
+
+    // Bulk-grant permissions on all existing files and folders in the workspace
+    const permissionType =
+      dto.role === 'owner' ? 'share' : dto.role === 'editor' ? 'write' : 'read';
+
+    const [files, folders] = await Promise.all([
+      this.fileRepo.find({ where: { workspaceId: id } }),
+      this.folderRepo.find({ where: { workspaceId: id } }),
+    ]);
+
+    const permsToInsert = [
+      ...files.map((f) => ({
+        resourceType: 'file',
+        resourceId: f.id,
+        userId: dto.userId,
+        permissionType,
+        grantedBy: userId,
+      })),
+      ...folders.map((f) => ({
+        resourceType: 'folder',
+        resourceId: f.id,
+        userId: dto.userId,
+        permissionType,
+        grantedBy: userId,
+      })),
+    ];
+
+    if (permsToInsert.length > 0) {
+      await this.permRepo
+        .createQueryBuilder()
+        .insert()
+        .into(Permission)
+        .values(permsToInsert)
+        .orIgnore()
+        .execute();
+    }
+
+    return savedMember;
   }
 
   async removeMember(id: string, targetUserId: string, userId: string) {

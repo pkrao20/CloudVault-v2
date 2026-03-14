@@ -6,10 +6,11 @@ import { Workspace } from './workspace.entity';
 import { WorkspaceMember } from './workspace-member.entity';
 import { File } from '../files/file.entity';
 import { Folder } from '../folders/folder.entity';
+import { Permission } from '../permissions/permission.entity';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Workspace, WorkspaceMember, File, Folder]),
+    TypeOrmModule.forFeature([Workspace, WorkspaceMember, File, Folder, Permission]),
   ],
   providers: [WorkspacesService],
   controllers: [WorkspacesController],

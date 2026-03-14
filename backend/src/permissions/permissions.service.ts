@@ -5,8 +5,10 @@ import {
   ConflictException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { In, Repository } from 'typeorm';
 import { Permission } from './permission.entity';
+import { File } from '../files/file.entity';
+import { Folder } from '../folders/folder.entity';
 import { CreatePermissionDto } from './dto/create-permission.dto';
 import { FilesService } from '../files/files.service';
 import { FoldersService } from '../folders/folders.service';
@@ -17,10 +19,31 @@ export class PermissionsService {
   constructor(
     @InjectRepository(Permission)
     private readonly permRepo: Repository<Permission>,
+    @InjectRepository(File)
+    private readonly fileRepo: Repository<File>,
+    @InjectRepository(Folder)
+    private readonly folderRepo: Repository<Folder>,
     private readonly filesService: FilesService,
     private readonly foldersService: FoldersService,
     private readonly workspacesService: WorkspacesService,
   ) {}
+
+  /** Recursively collects IDs of all descendant folders (not including the root). */
+  private async collectDescendantFolderIds(folderId: string): Promise<string[]> {
+    const ids: string[] = [];
+    const queue = [folderId];
+    while (queue.length > 0) {
+      const currentId = queue.shift()!;
+      const children = await this.folderRepo.find({
+        where: { parentFolderId: currentId },
+      });
+      for (const child of children) {
+        ids.push(child.id);
+        queue.push(child.id);
+      }
+    }
+    return ids;
+  }
 
   private async canGrantPermission(
     resourceType: string,
@@ -107,7 +130,49 @@ export class PermissionsService {
       permissionType: dto.permissionType,
       grantedBy: grantingUserId,
     });
-    return this.permRepo.save(permission);
+    const saved = await this.permRepo.save(permission);
+
+    // When sharing a folder, cascade the same permission to all descendant
+    // subfolders and every file directly inside any of those folders.
+    if (dto.resourceType === 'folder') {
+      const descendantFolderIds = await this.collectDescendantFolderIds(dto.resourceId);
+      const allFolderIds = [dto.resourceId, ...descendantFolderIds];
+
+      const files = await this.fileRepo.find({
+        where: { folderId: In(allFolderIds) },
+      });
+
+      const cascadePerms = [
+        // files inside the shared folder tree
+        ...files.map((f) => ({
+          resourceType: 'file',
+          resourceId: f.id,
+          userId: dto.userId,
+          permissionType: dto.permissionType,
+          grantedBy: grantingUserId,
+        })),
+        // descendant subfolders (root folder already saved above)
+        ...descendantFolderIds.map((fid) => ({
+          resourceType: 'folder',
+          resourceId: fid,
+          userId: dto.userId,
+          permissionType: dto.permissionType,
+          grantedBy: grantingUserId,
+        })),
+      ];
+
+      if (cascadePerms.length > 0) {
+        await this.permRepo
+          .createQueryBuilder()
+          .insert()
+          .into(Permission)
+          .values(cascadePerms)
+          .orIgnore()
+          .execute();
+      }
+    }
+
+    return saved;
   }
 
   async revoke(id: string, userId: string) {

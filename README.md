@@ -129,9 +129,10 @@ npm start      # serve production build on port 3001
 
 - **Workspaces** — shared spaces with owner/editor/viewer roles
 - **Folders** — unlimited depth, move/rename support
-- **Files** — upload up to 5 GB per file, rename, move between folders
+- **Files** — upload `.txt` files (see [Current Limitations](#current-limitations)), rename, move between folders
 - **Version history** — up to 10 versions per file with one-click restore
-- **Sharing** — grant read/write/share permissions to individual users
+- **Sharing** — grant read/write/share permissions to individual users on files or folders; sharing a folder automatically cascades the same permission to all descendant subfolders and their files
+- **Workspace member permissions** — adding a member auto-grants them permissions on every existing file and folder in the workspace (role maps to: `owner`→share, `editor`→write, `viewer`→read)
 - **Shared with me** — view all files and folders others have shared with you
 
 ---
@@ -200,6 +201,12 @@ permissions         — per-resource sharing (read | write | share)
 - TypeORM `synchronize: true` is convenient for development but can be destructive on schema changes in production — consider switching to migrations.
 - Mount `STORAGE_PATH` on persistent, backed-up storage (the directory holds all uploaded file data).
 - Run the backend behind a reverse proxy (nginx/Caddy) to handle TLS.
+
+---
+
+## Current Limitations
+
+- **File uploads are restricted to `.txt` files only.** This is intentional while the versioning system is being tested. The upload modal enforces this on the frontend (file picker filter + drop validation). The backend accepts any file type, so the restriction can be lifted by removing the `accept=".txt"` attribute and the extension check in [UploadFileModal.tsx](frontend/src/components/UploadFileModal.tsx).
 
 ---
 
