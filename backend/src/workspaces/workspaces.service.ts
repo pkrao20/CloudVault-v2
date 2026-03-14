@@ -74,7 +74,15 @@ export class WorkspacesService {
       relations: ['user'],
     });
 
-    return { ...workspace, members };
+    const safeMembers = members.map((m) => {
+      if (m.user) {
+        const { hashedPassword, ...safeUser } = m.user as any;
+        return { ...m, user: safeUser };
+      }
+      return m;
+    });
+
+    return { ...workspace, members: safeMembers };
   }
 
   async remove(id: string, userId: string) {
