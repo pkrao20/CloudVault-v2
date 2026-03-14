@@ -10,6 +10,7 @@ interface FileListProps {
   workspaceId: string;
   folderId: string;
   isOwner: boolean;
+  canEdit?: boolean;
 }
 
 function formatSize(bytes: number | string): string {
@@ -39,7 +40,7 @@ function fileIcon(mimeType: string | null): string {
   return '📎';
 }
 
-export default function FileList({ workspaceId, folderId, isOwner }: FileListProps) {
+export default function FileList({ workspaceId, folderId, isOwner, canEdit = false }: FileListProps) {
   const [files, setFiles] = useState<FileItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -229,6 +230,7 @@ export default function FileList({ workspaceId, folderId, isOwner }: FileListPro
         <TextFileViewer
           file={openTextFile}
           isOwner={isOwner}
+          canEdit={canEdit}
           onClose={() => setOpenTextFile(null)}
         />
       )}

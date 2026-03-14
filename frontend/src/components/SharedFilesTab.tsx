@@ -37,7 +37,7 @@ export default function SharedFilesTab({ currentWorkspaceId }: SharedFilesTabPro
   const [error, setError] = useState('');
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
-  const [openTextFile, setOpenTextFile] = useState<FileItem | null>(null);
+  const [openTextFile, setOpenTextFile] = useState<{ file: FileItem; canEdit: boolean } | null>(null);
 
   // Share-forward modal state
   const [shareTarget, setShareTarget] = useState<FileItem | null>(null);
@@ -191,7 +191,7 @@ export default function SharedFilesTab({ currentWorkspaceId }: SharedFilesTabPro
             <span className="text-lg">{fileIcon(s.file.mimeType)}</span>
             {isTextFile(s.file) ? (
               <button
-                onClick={() => setOpenTextFile(s.file)}
+                onClick={() => setOpenTextFile({ file: s.file, canEdit: s.permission === 'editor' })}
                 className="text-sm text-indigo-600 hover:underline font-medium text-left"
               >
                 {s.file.name}
@@ -219,7 +219,7 @@ export default function SharedFilesTab({ currentWorkspaceId }: SharedFilesTabPro
           <div className="flex items-center justify-end gap-3">
             {isTextFile(s.file) && (
               <button
-                onClick={() => setOpenTextFile(s.file)}
+                onClick={() => setOpenTextFile({ file: s.file, canEdit: s.permission === 'editor' })}
                 className="text-sm text-gray-600 hover:text-indigo-600 transition-colors font-medium"
               >
                 Open
@@ -272,9 +272,9 @@ export default function SharedFilesTab({ currentWorkspaceId }: SharedFilesTabPro
 
       {openTextFile && (
         <TextFileViewer
-          file={openTextFile}
+          file={openTextFile.file}
           isOwner={false}
-          canEdit={true}
+          canEdit={openTextFile.canEdit}
           onClose={() => setOpenTextFile(null)}
         />
       )}

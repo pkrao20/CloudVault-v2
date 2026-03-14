@@ -8,9 +8,10 @@ interface FolderListProps {
   workspaceId: string;
   refreshKey?: number;
   isOwner?: boolean;
+  canEdit?: boolean;
 }
 
-export default function FolderList({ workspaceId, refreshKey = 0, isOwner = false }: FolderListProps) {
+export default function FolderList({ workspaceId, refreshKey = 0, isOwner = false, canEdit = false }: FolderListProps) {
   const [folders, setFolders] = useState<Folder[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -94,7 +95,7 @@ export default function FolderList({ workspaceId, refreshKey = 0, isOwner = fals
           </span>
         </div>
 
-        <FileList workspaceId={workspaceId} folderId={openFolder.id} isOwner={isOwner} />
+        <FileList workspaceId={workspaceId} folderId={openFolder.id} isOwner={isOwner} canEdit={canEdit} />
       </div>
     );
   }

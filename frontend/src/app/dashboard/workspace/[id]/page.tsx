@@ -125,7 +125,7 @@ export default function WorkspacePage() {
               New Folder
             </button>
           </div>
-          <FolderList workspaceId={id} refreshKey={folderRefreshKey} isOwner={isOwner} />
+          <FolderList workspaceId={id} refreshKey={folderRefreshKey} isOwner={isOwner} canEdit={isEditor} />
         </div>
       )}
 

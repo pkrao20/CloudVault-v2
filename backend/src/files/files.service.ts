@@ -288,7 +288,14 @@ export class FilesService {
     if (!file) {
       throw new NotFoundException('File not found');
     }
-    await this.checkEditorOrOwner(file.workspaceId, userId);
+
+    const member = await this.workspacesService.getMember(file.workspaceId, userId);
+    if (!member || (member.role !== 'editor' && member.role !== 'owner')) {
+      const perm = await this.permRepo.findOne({
+        where: { resourceType: 'file', resourceId: fileId, userId, permissionType: 'write' },
+      });
+      if (!perm) throw new ForbiddenException('You do not have permission to restore versions of this file');
+    }
 
     const version = await this.versionRepo.findOne({
       where: { id: versionId, fileId },
